@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login (Widget) — CerebriNetworks</title>
+  <link rel="stylesheet" href="/assets/css/auth.css" />
+</head>
+<body class="auth-body">
+  <main class="auth-card">
+    <h1>Sign in</h1>
+    <p class="muted">This version uses the Netlify Identity popup UI.</p>
+
+    <div data-netlify-identity-button>Open Login</div>
+    <div style="margin-top: 16px" data-netlify-identity-menu></div>
+
+    <div class="row space-between" style="margin-top: 20px">
+      <a href="/" class="link">&larr; Back to site</a>
+    </div>
+  </main>
+
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script>
+    netlifyIdentity.init();
+    netlifyIdentity.on('login', () => window.location.href='/dashboard.html');
+    netlifyIdentity.on('logout', () => window.location.reload());
+  </script>
+</body>
+</html>

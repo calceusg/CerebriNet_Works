@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Central Hub — CerebriNetworks</title>
+
+  <!-- Optional site CSS / auth helpers (keep if you use them) -->
+  <link rel="stylesheet" href="/assets/css/auth.css" />
+  <script src="https://cdn.jsdelivr.net/npm/gotrue-js@0.9.29/dist/gotrue.min.js"></script>
+  <script src="/assets/js/auth.js"></script>
+
+  <style>
+    :root{
+      --bg:#0a120a;
+      --bg2:#0c160c;
+      --phos:#17f45a;
+      --phos-dim:#0abf47;
+      --phos-faint:#0a7f34;
+    }
+
+    /* Load Fixedsys Excelsior from the SAME FOLDER as this HTML file */
+    @font-face{
+      font-family: "FixedsysExcelsior";
+      src: url("FSEX300.ttf") format("truetype"); /* ← relative path (safe) */
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    body.auth-body{
+      margin:0; padding:0;
+      background: var(--bg);
+      color: var(--phos);
+      font-family: "FixedsysExcelsior","Fixedsys","VT323","Share Tech Mono","Courier New",monospace;
+      letter-spacing: 0;
+      line-height: 1.35;
+      -webkit-font-smoothing: none;  /* crisper pixel feel */
+      -moz-osx-font-smoothing: auto;
+    }
+
+    main.auth-card{
+      background: var(--bg2);
+      border:1px solid var(--phos-dim);
+      box-shadow: 0 0 12px var(--phos-faint);
+      border-radius: 10px;
+      padding: 24px;
+      max-width: 960px;
+      margin: 48px auto;
+      display:flex; flex-direction:column; gap:16px;
+    }
+    @media (max-width: 980px){
+      main.auth-card{ margin: 24px 16px; }
+    }
+
+    /* Header row with no wrapping so "Log Out" stays on one line */
+    header.row{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:16px; margin-bottom: 6px;
+      flex-wrap: nowrap;                 /* keep one line */
+    }
+    header.row h1{
+      margin:0;
+      font-size: clamp(28px, 4.6vw, 48px);
+      line-height: 1.1;
+      letter-spacing: 0;
+      text-transform: uppercase;
+      text-shadow: 0 0 1px rgba(23,244,90,.35), 0 0 2px rgba(23,244,90,.25);
+      flex: 1 1 auto; min-width: 0;      /* let title flex instead of pushing button */
+    }
+
+    /* Buttons */
+    .btn, #logoutBtn{
+      display:inline-block;
+      padding: 10px 16px;
+      border-radius: 8px;
+      border:1px solid var(--phos);
+      background: transparent;
+      color: var(--phos);
+      text-decoration:none;
+      cursor:pointer;
+      letter-spacing: 0;
+      font-family: inherit;              /* use Fixedsys */
+      box-shadow: 0 0 8px rgba(23,244,90,.15) inset, 0 0 6px rgba(23,244,90,.12);
+      transition: background .2s ease, transform .08s ease;
+    }
+    .btn:hover, #logoutBtn:hover{ background: rgba(23,244,90,.10); }
+    .btn:active, #logoutBtn:active{ transform: translateY(1px); }
+
+    /* Keep "Log Out" text from wrapping */
+    #logoutBtn{
+      font-size: clamp(16px, 1.5vw, 18px);
+      font-weight: 700;
+      white-space: nowrap;               /* no wrap */
+      flex: 0 0 auto;                    /* don’t shrink */
+    }
+
+    .content-stack{
+      display:grid; gap:10px;
+      line-height:1.4;
+      font-size: clamp(20px, 2.2vw, 26px);
+    }
+
+    .actions{ margin-top: 10px; }
+  </style>
+</head>
+
+<body class="auth-body">
+  <main class="auth-card">
+    <header class="row">
+      <h1>Central Hub — Status Report</h1>
+      <button id="logoutBtn">Log Out</button>
+    </header>
+
+    <div class="content-stack">
+      <p>War never changes... <strong id="whoami"></strong>but sneaky links do.</p>
+      <p>Radiation in the wastes, corruption in the soul... filter and pray.</p>
+    </div>
+
+    <div class="actions">
+      <a href="/accessgate" class="btn">⬅ Return to Access Gate</a>
+    </div>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = window.requireAuth && window.requireAuth({ redirectTo: '/accessgate' });
+      if (!user) return;
+
+      const nameEl = document.getElementById('whoami');
+      if (nameEl && window.displayName) nameEl.textContent = window.displayName(user);
+
+      document.getElementById('logoutBtn').addEventListener('click', async () => {
+        if (window.logout) await window.logout();
+        location.href = '/accessgate';
+      });
+    });
+  </script>
+</body>
+</html>

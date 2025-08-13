@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CerebriNet_Works - Central Access Gate</title>
+
+<style>
+/* Make the email input match the password box background */
+/* If you want it to look EXACTLY like the password input, do this: */
+#uid {
+  background: #020a05;               /* same as .loginBox input background */
+  border: 1px solid var(--phos-faint); /* same border as other inputs */
+  color: inherit;
+  outline: none;
+  letter-spacing: 2px; /* keep if you want the same spacing as pass */
+}
+</style>
+
+<style>
+/* === Base / Visuals === */
+.boot-fade{
+  position:fixed; inset:0;
+  background:#000;
+  z-index: 10000;
+  opacity:1;
+  pointer-events:none;
+  transition: opacity .8s ease;
+}
+.boot-fade.hide{ opacity:0; }
+  @font-face{
+    font-family:'Monofonto';
+    src:url('/assets/fonts/monofonto.woff2') format('woff2');
+    font-weight:normal; font-style:normal; font-display:swap;
+  }
+  :root{ --bg:#0a120a; --bg2:#0c160c; --phos:#17f45a; --phos-dim:#0abf47; --phos-faint:#0a7f34; }
+  html,body{
+    height:100%; margin:0; background: radial-gradient(1600px 900px at 50% -10%, var(--bg2), var(--bg));
+    color: var(--phos);
+    font-family: Monofonto, 'VT323','Share Tech Mono','IBM Plex Mono',monospace;
+    letter-spacing:.35px; overflow:hidden;
+  }
+  .frame{ position:fixed; inset:0; overflow:hidden; border:2px solid var(--phos-faint);
+    background: linear-gradient(180deg, rgba(11,27,14,.55), rgba(8,20,11,.45));
+    box-shadow: 0 0 14px rgba(23,244,90,.08) inset, 0 0 7px rgba(23,244,90,.1);
+    animation:flicker 6s linear infinite; }
+  @keyframes flicker{0%,100%{opacity:1} 10%{opacity:.98} 20%{opacity:1} 30%{opacity:.97} 40%{opacity:1} 50%{opacity:.99}}
+  .screen{position:absolute; inset:0; overflow:hidden; will-change: transform;}
+  .brand { position:absolute; top:16px; left:18px; display:flex; gap:10px; align-items:flex-start; z-index:2; }
+  .brand .title { font-weight:700; color:var(--phos); text-shadow:0 0 1px rgba(23,244,90,.35),0 0 2px rgba(23,244,90,.25); }
+  .brand .subtitle{ font-size:12px; opacity:.88; color:var(--phos); letter-spacing:.6px; margin-top:2px; text-shadow:0 0 1px rgba(23,244,90,.35); }
+  .term{ position:absolute; inset:80px 18px 110px 18px; overflow:auto; }
+  .term::-webkit-scrollbar{ display:none; } .term{ scrollbar-width: none; }
+  .line{opacity:0; transform:translateY(6px);} .line.show{opacity:1; transform:translateY(0); transition:opacity .18s linear, transform .18s linear;}
+  .glitch{position:relative; display:inline-block;}
+  .glitch::before,.glitch::after{content:attr(data-shadow); position:absolute; left:0; top:0; color:rgba(23,244,90,.85);}
+  .glitch.mild::before{transform:translate(-1px,0) skewX(3deg); clip-path:inset(0 0 60% 0);} .glitch.mild::after{transform:translate(1px,0)  skewX(-3deg); clip-path:inset(45% 0 0 0);}
+  .rgb-split *{ text-shadow: -2px 0 rgba(255,0,0,.45), 2px 0 rgba(0,200,255,.45), 0 0 1px rgba(23,244,90,.45); }
+  .blur-hit{ filter: blur(0.9px) contrast(1.08); }
+  .caret{display:inline-block; width:.6ch; background: var(--phos); margin-left:2px; animation:blink 1s steps(1,end) infinite;}
+  @keyframes blink{50%{opacity:0}}
+  .progressWrap{position:absolute; left:18px; right:18px; bottom:18px; display:flex; align-items:center; gap:10px; z-index:2}
+  .progress{flex:1; height:16px; border:1px solid var(--phos-faint); box-shadow:inset 0 0 8px rgba(23,244,90,.18); background:rgba(23,244,90,.08);}
+  .progress > i{display:block; height:100%; width:0; background:rgba(23,244,90,.96); box-shadow:0 0 8px rgba(23,244,90,.35);}
+  .percent{min-width:58px; text-align:right; opacity:.95; text-shadow:0 0 1px rgba(23,244,90,.35),0 0 2px rgba(23,244,90,.25);}
+  .slice{ position:absolute; left:-12px; right:-12px; height:36px;
+    background:linear-gradient(90deg, rgba(23,244,90,.12), rgba(23,244,90,.25), rgba(23,244,90,.12));
+    mix-blend-mode:screen; pointer-events:none; z-index:4; }
+  .tv-burst{ position:absolute; inset:-2px; pointer-events:none; opacity:0; z-index:3; }
+  .tv-burst::before, .tv-burst::after{ content:""; position:absolute; inset:0; }
+  .tv-burst::before{
+    background:
+      repeating-linear-gradient(0deg, rgba(23,244,90,.28) 0 1px, transparent 1px 3px),
+      repeating-linear-gradient(90deg, rgba(23,244,90,.14) 0 2px, transparent 2px 4px);
+    animation: tvStatic .2s steps(2,end) infinite; filter:contrast(1.3) brightness(1.05);
+  }
+  .tv-burst::after{
+    background:linear-gradient(0deg, transparent 0%, rgba(23,244,90,.18) 46%, rgba(23,244,90,.42) 50%, rgba(23,244,90,.18) 56%, transparent 100%);
+    transform: translateY(-100%); animation: tvSweep .26s linear infinite;
+  }
+  @keyframes tvStatic{ 50%{background-position:0 2px, 2px 0} }
+  @keyframes tvSweep{ to{ transform: translateY(100%);} }
+  .tv-burst.active{ opacity:1; }
+
+  /* FIX: ensure error overlay always clickable / above effects */
+  .errorBox{position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.55); z-index:10001;}
+  .errorCard{width:520px; border:2px solid var(--phos-faint); background:#041006; box-shadow:0 0 18px rgba(23,244,90,.22) inset;}
+  .errorHeader{padding:8px 10px; border-bottom:1px solid var(--phos-faint); font-weight:700;}
+  .errorBody{padding:10px; font-size:14px;}
+  .errorActions{padding:10px; border-top:1px solid var(--phos-faint); text-align:right;}
+  .btn{display:inline-block; padding:6px 10px; border:1px solid var(--phos-faint); background:transparent; color:var(--phos); cursor:pointer;}
+  .btn:hover{filter:brightness(120%);} .btn:focus{outline:2px solid var(--phos-faint); outline-offset:2px;}
+
+  .welcome{ position:absolute; top:47%; left:57%;
+    transform: translate(calc(-50% + 25%), -50%); display:none; z-index:10002; }
+  @media (max-width: 1200px){
+    .welcome{ left:50%; top:50%; transform: translate(-50%, -50%); }
+  }
+  .loginBox{width:min(92vw, 520px); padding:16px 22px; border:2px solid var(--phos-faint); background:#051106;
+    box-shadow:0 0 14px rgba(23,244,90,.18) inset, 0 0 12px rgba(23,244,90,.12); }
+  .loginBox h1{margin:0 0 8px; font-size:20px; letter-spacing:1px; white-space:nowrap;}
+  .loginBox p{margin:0 0 10px; opacity:.92;}
+  .loginBox input{width:100%; background:#020a05; color:var(--phos); border:1px solid var(--phos-faint); padding:6px 8px; outline:none; font-family:inherit; font-size:14px; box-sizing:border-box;}
+
+  /* === Warning Gate Styles === */
+  .nx-gate{ position:fixed; inset:0; display:grid; place-items:center;
+    background:rgba(0,10,20,0.40); backdrop-filter:blur(2px);
+    z-index:9999; font-family:inherit; color:var(--phos); }
+  .nx-card{ width:min(90vw, 560px); max-height: 420px; border:2px solid var(--phos-faint);
+    background: #051106; box-shadow:0 0 14px rgba(23,244,90,.18) inset, 0 0 12px rgba(23,244,90,.12);
+    border-radius:14px; padding:18px; display:flex; align-items:stretch; justify-content:center; }
+  .nx-card-inner{ display:flex; gap:16px; align-items:center; justify-content:flex-start; width:100%; height:auto; }
+  .nx-logoCol{ flex:0 0 42%; display:flex; align-items:center; justify-content:center; }
+  .nx-logoSvg{ width:100%; height:auto; max-height:100%; filter:drop-shadow(0 4px 10px rgba(0,0,0,.35)); }
+  .nx-contentCol{ flex:1; display:flex; flex-direction:column; gap:10px; padding:6px 2px; min-width:0; }
+  .nx-contentCol h2{ margin:0; letter-spacing:.08em; font-weight:700; font-size: clamp(16px, 2.2vw, 22px); color:var(--phos);
+    text-shadow:0 0 1px rgba(23,244,90,.35),0 0 2px rgba(23,244,90,.25); }
+  .nx-sub{ margin:0; font-size:clamp(13px, 1.8vw, 15px); color:var(--phos); opacity:.9; }
+  .nx-text p{ margin:.25em 0; font-size:clamp(12px, 1.7vw, 14px); color:var(--phos); opacity:.92; }
+  .nx-btn{ margin-top:auto; align-self:flex-start; padding:.6em 1.0em; font-size:clamp(13px, 1.8vw, 15px);
+    border-radius:10px; border:1px solid var(--phos-faint); background:transparent; color:var(--phos); cursor:pointer;
+    transition:filter .12s ease, transform .06s ease; }
+  .nx-btn:hover{ filter:brightness(120%); } .nx-btn:active{ transform:translateY(1px); }
+  .nx-gate.hidden{ opacity:0; pointer-events:none; transition:opacity .22s ease; }
+  @media (max-width: 520px){
+    .nx-card{ width:min(94vw, 480px); height:auto; }
+    .nx-card-inner{ flex-direction:column; align-items:center; text-align:center; }
+    .nx-logoCol{ flex:0 0 auto; width:70%; }
+    .nx-contentCol{ align-items:center; }
+  }
+  /* === End Warning Gate Styles === */
+</style>
+</head>
+<body>
+<div id="bootFade" class="boot-fade"></div>
+
+<!-- === WARNING GATE === -->
+<div id="nxGate" class="nx-gate" aria-hidden="false">
+  <div class="nx-card" role="dialog" aria-modal="true" aria-labelledby="nxTitle">
+    <div class="nx-card-inner">
+      <div class="nx-logoCol">
+        <svg class="nx-logoSvg" viewBox="0 0 512 512" aria-hidden="true" role="img">
+          <style>
+            .nx-phos{fill:none;stroke:var(--phos);stroke-width:16;stroke-linecap:round}
+            .nx-thin{stroke-width:12}
+          </style>
+          <circle class="nx-phos" cx="256" cy="256" r="236" />
+          <circle class="nx-phos nx-thin" cx="256" cy="256" r="200" />
+          <circle class="nx-phos" cx="256" cy="200" r="140" />
+          <circle class="nx-phos" cx="256" cy="312" r="140" />
+          <circle class="nx-phos nx-thin" cx="256" cy="256" r="48" />
+        </svg>
+      </div>
+      <div class="nx-contentCol">
+        <h2 id="nxTitle">[SECURE NETWORK ACCESS POINT]</h2>
+        <p class="nx-sub">Integrity verification & corruption removal will begin upon entry.</p>
+        <div class="nx-text">
+          <p>Authorized users only. All activity is monitored and recorded.</p>
+          <p>If you do not have valid credentials, disconnect immediately.</p>
+        </div>
+        <button id="nxGateBtn" class="nx-btn" aria-label="Establish Connection">Establish Connection</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- /WARNING GATE -->
+
+<!-- Audio -->
+<audio id="glitchPop" preload="auto">
+  <source src="glitch-pop-long.wav" type="audio/wav">
+  <source src="glitch-pop-long.mp3" type="audio/mpeg">
+</audio>
+<audio id="bootHum" preload="auto" loop>
+  <source src="boot-hum-long.wav" type="audio/wav">
+  <source src="boot-hum-long.mp3" type="audio/mpeg">
+</audio>
+<audio id="bootHumB" preload="auto" playsinline>
+  <source src="boot-hum-long.wav" type="audio/wav">
+  <source src="boot-hum-long.mp3" type="audio/mpeg">
+</audio>
+<audio id="loginPing" preload="auto">
+  <source src="click_ping.wav" type="audio/wav">
+</audio>
+
+<!-- Razer Green click sample pool -->
+<div id="clickPool" style="display:none">
+  <audio class="keyClick" preload="auto" src="clicks/razer-green-01.wav"></audio>
+  <audio class="keyClick" preload="auto" src="clicks/razer-green-02.wav"></audio>
+  <audio class="keyClick" preload="auto" src="clicks/razer-green-03.wav"></audio>
+  <audio class="keyClick" preload="auto" src="clicks/razer-green-04.wav"></audio>
+  <audio class="keyClick" preload="auto" src="clicks/razer-green-05.wav"></audio>
+  <audio class="keyClick" preload="auto" src="clicks/razer-green-06.wav"></audio>
+  <audio class="keyClick" preload="auto" src="clicks/razer-green-07.wav"></audio>
+  <audio class="keyClick" preload="auto" src="clicks/razer-green-08.wav"></audio>
+</div>
+
+<div class="frame" id="frame">
+  <div class="screen" id="screen">
+    <div class="tv-burst" id="tvBurst"></div>
+
+    <div class="brand">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="48" height="48" aria-hidden="true">
+        <style>.phos{fill:none;stroke:#17f45a;stroke-width:16;stroke-linecap:round}.thin{stroke-width:12}</style>
+        <circle class="phos" cx="256" cy="256" r="236" />
+        <circle class="phos thin" cx="256" cy="256" r="200" />
+        <circle class="phos" cx="256" cy="200" r="140" />
+        <circle class="phos" cx="256" cy="312" r="140" />
+        <circle class="phos thin" cx="256" cy="256" r="48" />
+      </svg>
+      <div>
+        <div class="title">NAOXIN // CEREBRI ISTHMUS // CENTRAL HUB</div>
+        <div class="subtitle" id="brandSubtitle">UPTIME 00:00:00 · LAST SYNC: T-000s · INTEGRITY: BOOT</div>
+      </div>
+    </div>
+
+    <div id="terminal" class="term" aria-live="polite" aria-atomic="false"></div>
+
+    <div class="progressWrap" aria-hidden="false">
+      <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="bar"></i></div>
+      <div class="percent" id="pct">0%</div>
+    </div>
+
+    <div class="errorBox" id="errorBox" role="dialog" aria-modal="true" aria-labelledby="errh">
+      <div class="errorCard">
+        <div class="errorHeader" id="errh">SYSTEM ERROR — 0xNAXN-7E</div>
+        <div class="errorBody">
+          <p><b>Code:</b> 0xNAXN-7E <span style="opacity:.8">(FUSANG CURRENT DESYNC)</span></p>
+          <p>Hotline Console failed integrity check while mounting <span class="glitch mild" data-shadow="/WEIZHI">/WEIZHI</span>. Log clipped due to interference.</p>
+          <p>Retrying will re-align Fusang drivers and re-run checks.</p>
+        </div>
+        <div class="errorActions">
+          <button class="btn" id="retryBtn">TRY AGAIN</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="welcome" id="welcome" role="dialog" aria-modal="true" aria-labelledby="wlch">
+      <div class="loginBox">
+        <h1 id="wlch">INTEGRITY CONFIRMED — SYSTEM SECURE <span class="caret"></span></h1>
+        <p>No corruption detected. Proceed to login.</p>
+        <form id="authForm" autocomplete="on">
+          <div style="display:grid; gap:8px; text-align:left;">
+            <label for="uid">Designation Code</label>
+            <input id="uid" name="uid" type="email" autocomplete="email" placeholder="e.g. user@domain.com" required>
+            <label for="pass">Passcode</label>
+            <input id="pass" name="pass" type="password" autocomplete="current-password" placeholder="••••••" style="letter-spacing:2px;" required minlength="0">
+            <button type="submit" class="btn" style="margin-top:8px;">ENTER</button>
+            <div id="authMsg" style="opacity:.9; min-height:1.2em" aria-live="polite"></div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== Debug overlay (dev only) ===== -->
+<script>
+(function(){
+  const dev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  if (!dev) {
+    window.addEventListener('error',   e => console.error('[BOOT JS ERROR]', e.message, e));
+    window.addEventListener('unhandledrejection', e => console.error('[BOOT JS ERROR] Unhandled Rejection', e.reason));
+    return;
+  }
+  const showErr = (msg, src, line, col, err) => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText =
+      "position:fixed;inset:0;background:rgba(0,0,0,.85);color:#17f45a;font:14px/1.4 monospace;z-index:99999;padding:16px;white-space:pre-wrap;overflow:auto";
+    wrap.textContent = `[BOOT JS ERROR]\n${msg}\n${src||''}:${line||''}:${col||''}\n${err && err.stack ? err.stack : ''}`;
+    document.body.appendChild(wrap);
+  };
+  window.addEventListener('error', e => showErr(e.message, e.filename, e.lineno, e.colno, e.error));
+  window.addEventListener('unhandledrejection', e => showErr('Unhandled Promise Rejection', '', 0, 0, e.reason));
+})();
+</script>
+
+<!-- ===== Main Boot / UI Logic ===== -->
+<script>
+(function(){
+  "use strict";
+
+  const humA = document.getElementById('bootHum') || document.getElementById('bootHumA');
+  const humB = document.getElementById('bootHumB');
+  const glitchPop  = document.getElementById('glitchPop');
+
+  // ADD: references so we can remove autoplay kick listeners later
+  let _humKickClick = null, _humKickKey = null;
+
+  const CLICK_GAIN = 0.8, CLICK_VARIANCE = 0.25, RATE_VARIANCE = 0.10, ROBOT_JITTER_MS = 4;
+  const BURST_MIN = 9, BURST_MAX = 14;
+
+  const term    = document.getElementById('terminal');
+  const bar     = document.getElementById('bar');
+  const pct     = document.getElementById('pct');
+  const welcome = document.getElementById('welcome');
+  const errorBox= document.getElementById('errorBox');
+  const retryBtn= document.getElementById('retryBtn');
+  const tvBurst = document.getElementById('tvBurst');
+  const screen  = document.getElementById('screen');
+  const subtitleEl = document.getElementById('brandSubtitle');
+
+  window.humBlocked = false;
+
+  function fadeIn(el, target=0.35, dur=300){
+    if(!el) return;
+    try{ el.muted = false; }catch{}
+    const steps = Math.max(3, Math.floor(dur/16));
+    let i=0; el.volume = Math.min(el.volume||0, target*0.05);
+    const id = setInterval(()=>{
+      i++; el.volume = Math.min(target, (el.volume||0) + target/steps);
+      if (i>=steps){ el.volume = target; clearInterval(id); }
+    }, 16);
+  }
+  function fadeOutAndStop(el, dur=400){
+    if (!el) return;
+    const start = Math.max(0, el.volume || 0);
+    const steps = Math.max(3, Math.floor(dur/16));
+    let i = 0;
+    const id = setInterval(()=>{
+      i++; el.volume = Math.max(0, start * (1 - i/steps));
+      if (i >= steps){
+        try { el.pause(); el.currentTime = 0; } catch {}
+        el.volume = 0; clearInterval(id);
+      }
+    }, 16);
+  }
+
+function killAllBgAudio(){
+  const ids = ['bootHum','bootHumA','bootHumB'];
+  ids.forEach(id=>{
+    const el = document.getElementById(id);
+    if (!el) return;
+    try {
+      el.loop = false;
+      el.muted = true;
+      el.volume = 0;
+      el.pause?.();
+      el.currentTime = 0;
+      el.load?.();
+    } catch {}
+  });
+  window.humBlocked = true;
+  window._allowHum = false;  // <--- lock hum off
+
+  try {
+    if (_humKickClick) window.removeEventListener('click', _humKickClick);
+    if (_humKickKey)   window.removeEventListener('keydown', _humKickKey);
+  _humKickClick = null;
+    _humKickKey   = null;
+  } catch {}
+}
+
+  function tryPlay(el){
+    try { return el && el.play && el.play(); }
+    catch(e){ return Promise.reject(e); }
+  }
+  function ensureHum(){
+  if (window.humBlocked || !window._allowHum) return;  // require allow flag
+  const a = humA, b = humB;
+  if (!a && !b) return;
+
+  const tryBoth = ()=>{
+    const p1 = tryPlay(a) || Promise.resolve();
+    const p2 = tryPlay(b) || Promise.resolve();
+    Promise.allSettled([p1, p2]).then(()=>{
+      fadeIn(a, 0.35, 280);
+      fadeIn(b, 0.25, 280);
+    });
+  };
+
+  // immediate attempt (may be blocked without a gesture)
+  tryBoth();
+
+  // only kick on generic clicks/keys, not while typing in inputs
+  // set removable, one-shot “kick” listeners
+const kickOnce = (ev)=> {
+  // If hum isn't allowed, do nothing (important after login / kill)
+  if (!window._allowHum) return;
+
+  // Ignore typing into fields/editables
+  const tag = (ev.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || ev.target.isContentEditable) return;
+
+  // Also ignore if login is visible
+  const loginVisible = document.getElementById('welcome')?.style.display === 'block';
+  if (loginVisible) return;
+
+  tryBoth();
+  if (_humKickClick) window.removeEventListener('click', _humKickClick);
+  if (_humKickKey)   window.removeEventListener('keydown', _humKickKey);
+};
+_humKickClick = kickOnce;
+_humKickKey   = kickOnce;
+window.addEventListener('click', _humKickClick, { once:true });
+window.addEventListener('keydown', _humKickKey, { once:true });
+}
+
+  const pool = Array.from(document.querySelectorAll('#clickPool .keyClick')).filter(a => a.src);
+  function playKeyClick(){
+    if (!pool.length) return;
+    const proto = pool[Math.floor(Math.random()*pool.length)];
+    const el = proto.cloneNode(true);
+    const volBase = CLICK_GAIN;
+    const volJit = (Math.random()*2 - 1) * CLICK_VARIANCE * 0.5;
+    el.volume = Math.max(0, Math.min(1, volBase + volJit));
+    const rateJit = (Math.random()*2 - 1) * RATE_VARIANCE;
+    el.playbackRate = 1.0 + rateJit;
+    try{ el.currentTime = Math.random()*0.01; }catch{}
+    el.addEventListener('ended', ()=> el.remove());
+    el.addEventListener('error', ()=> el.remove());
+    document.getElementById('clickPool').appendChild(el);
+    el.play().catch(()=> el.remove());
+  }
+  function clickBurst(ms){
+    const N = Math.floor(Math.random()*(BURST_MAX - BURST_MIN + 1)) + BURST_MIN;
+    const base = Math.max(28, Math.min(38, (ms ? ms / Math.max(6, N) : 32)));
+    for (let i=0;i<N;i++){
+      const t = base * i + ((Math.random()*2 - 1) * ROBOT_JITTER_MS);
+      setTimeout(()=> playKeyClick(), Math.max(0, t));
+    }
+  }
+
+  (function tryAutoplayFromPreboot(){ try{ sessionStorage.removeItem('fromPreboot'); }catch{} })();
+
+  let idx=0, prog=0;
+  let paused=false, faultRaised=false, recovered=false;
+  let linesDone=false, progressDone=false, allowComplete=false;
+  window.chaosDisabled = false;
+
+  const bootStart  = Date.now();
+  let lastSyncAt   = bootStart;
+  let integrity    = 'BOOT';
+
+  function fmtUptime(ms){ const s=Math.floor(ms/1000); return `${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor((s%3600)/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
+  function fmtT(ms){ const s=Math.min(999, Math.floor(ms/1000)); return `T-${String(s).padStart(3,'0')}s`; }
+  function refreshSubtitle(){
+    if(!subtitleEl) return;
+    const now = Date.now();
+    subtitleEl.textContent = `UPTIME ${fmtUptime(now - bootStart)} · LAST SYNC: ${fmtT(now - lastSyncAt)} · INTEGRITY: ${integrity}`;
+  }
+  function markSync(){ lastSyncAt = Date.now(); }
+  setInterval(refreshSubtitle, 500); refreshSubtitle();
+
+  const BOOT_LINES = [
+    "POST v12.8.25 — CerebriNet Operating System",
+    "Memory Map…  1024K OK   |   Extended 8192M OK",
+    "Detecting I/O…  TERM[OK]  AUDIO[OK]  NET[OK]  FUSANG_BUS[SYNC]",
+    "Mounting volumes…  /NAO  /CEREBRI  /XIN  /FEIS  /WEIZHI",
+    "Fusang Drivers v2.7 — currents within nominal variance (±0.03)",
+    "Loading CerebriNet Console…",
+    "Authenticating: crossplane conduit — Earth Relay",
+    "Decrypting file fragments… completed",
+    "Minor integrity breach… 2 corruption entries contained",
+    "Calibrating phosphor persistence… OK",
+    "Re-indexing data sector grid… 14 sectors",
+    "Auth handler diffs… merged (3 conflicts ignored)",
+    "Earth Relay toll ledger… reconciled",
+    "Weizhi drift compensator… engaged (δt = 0.003)",
+    "Mirror safety interlocks… green",
+    "Credentials database… sync complete",
+    "Entropy sweep… minor anomalies ignored",
+    "User profile cache… rebuilt",
+    "Telemetry ping… OK",
+    "Spinning up call relay… channel stable",
+    "Launching: CerebriNet_Works (Central)",
+    "[BOOT COMPLETE — Awaiting user input]"
+  ];
+
+  const LAG = { baseDelay: 760, jitterPct: 0.9, pauseProb: 0.7, pauseRange: [220, 1400] };
+  function rand(min,max){return Math.random()*(max-min)+min;}
+  function chance(p){return Math.random()<p;}
+  function nextDelay(){
+    const base = LAG.baseDelay*(1+(Math.random()*2-1)*LAG.jitterPct);
+    const extra = chance(LAG.pauseProb)? rand(...LAG.pauseRange):0;
+    return Math.max(80, base+extra);
+  }
+
+  function corruptText(s, n){
+    const chars = ['█','░','▒','▓','§','¤','Ø','∆','≈','¿','*','#','/','\\','_','-','~','^'];
+    let a = s.split('');
+    for(let i=0;i<n;i++){ const j = Math.floor(Math.random()*a.length); a[j] = chars[Math.floor(Math.random()*chars.length)]; }
+    return a.join('');
+  }
+  function sliceBurst(){
+    const bands = Math.random() < .7 ? 10 : 6;
+    for(let i=0;i<bands;i++){
+      const s=document.createElement('div'); s.className='slice';
+      s.style.top = Math.floor(Math.random()*((screen?.clientHeight||600)-40)+10) + 'px';
+      s.style.height = Math.floor(Math.random()*64+14) + 'px';
+      s.style.transform = `translateX(${(Math.random()<0.5?1:-1)*(Math.random()*38+10)}px)`;
+      s.style.opacity = .32;
+      screen.appendChild(s);
+      setTimeout(()=> s.remove(), 140 + Math.random()*520);
+    }
+  }
+  function tvGlitch(){
+    if(!tvBurst || !screen) return;
+    tvBurst.classList.add('active');
+    screen.classList.add('rgb-split','blur-hit');
+    setTimeout(()=>{ tvBurst.classList.remove('active'); screen.classList.remove('blur-hit'); }, 320);
+    setTimeout(()=>{ screen.classList.remove('rgb-split'); }, 600);
+  }
+  function screenPop(){
+    if(!screen) return;
+    const dx = Math.round(Math.random()*500 - 240);
+    const dy = Math.round(Math.random()*480 - 160);
+    screen.style.transform = `translate(${dx}px, ${dy}px)`;
+    setTimeout(()=>{ screen.style.transform = ''; }, Math.floor(Math.random()*70+50));
+  }
+  function addLine(text){
+    const p = document.createElement('p'); p.className='line';
+    if (chance(0.75)){
+      const g=document.createElement('span');
+      g.className='glitch mild'; g.dataset.shadow=text; g.textContent=corruptText(text,4);
+      p.appendChild(g);
+      setTimeout(()=>{ g.replaceWith(document.createTextNode(text)); }, 420);
+    } else { p.textContent = text; }
+    term.appendChild(p);
+    requestAnimationFrame(()=>p.classList.add('show'));
+    term.scrollTop = term.scrollHeight;
+    ensureHum(); // allow the function itself to decide based on window._allowHum
+    clickBurst(160 + Math.random()*160);
+    if (!window.chaosDisabled) {
+      if (Math.random()<0.65) sliceBurst();
+      if (Math.random()<0.55) tvGlitch();
+      if (Math.random()<0.75) screenPop();
+    }
+  }
+
+  // FIX: allow disabling the synthetic fault via URL or invite flows
+  const paramsAll = new URLSearchParams(location.search);
+  const hashParams = new URLSearchParams((location.hash||'').replace(/^#/,''));
+  const skipFault = paramsAll.get('nofault') === '1' || hashParams.get('nofault') === '1' || hashParams.has('invite_token') || paramsAll.has('invite_token');
+
+  const faultIndex = skipFault ? -1 : Math.floor(rand(Math.floor(BOOT_LINES.length*0.30), Math.floor(BOOT_LINES.length*0.85)));
+  function raiseFault(){
+    if (!errorBox) return;
+    paused = true; faultRaised = true;
+    addLine('! SYSTEM FAULT 0xNAXN-7E — FUSANG CURRENT DESYNC');
+    addLine('! Integrity check failed while mounting /Weizhi');
+    integrity = 'DEGRADED'; markSync(); refreshSubtitle();
+    setTimeout(()=> errorBox.style.display='flex', 180);
+    // Accessibility: focus retry
+    setTimeout(()=>{ try{ document.getElementById('retryBtn').focus(); }catch{} }, 200);
+  }
+
+  retryBtn && retryBtn.addEventListener('click', (ev)=>{
+    ev.stopPropagation();
+    errorBox.style.display='none';
+    if (glitchPop){ try{ glitchPop.currentTime = 0; glitchPop.play(); }catch{} }
+    window.humBlocked = true;
+    const stopHumOnce = () => {
+      try { if (humA) humA.loop = false; } catch {}
+      try { if (humB) humB.loop = false; } catch {}
+      fadeOutAndStop(humA, 500);
+      fadeOutAndStop(humB, 500);
+    };
+    if (glitchPop && typeof glitchPop.addEventListener === 'function') {
+      try { glitchPop.removeEventListener('ended', stopHumOnce); } catch {}
+      glitchPop.addEventListener('ended', stopHumOnce, { once: true });
+      const d = (glitchPop.duration && isFinite(glitchPop.duration)) ? glitchPop.duration * 1000 : 700;
+      setTimeout(stopHumOnce, d + 80);
+    } else { stopHumOnce(); }
+
+    addLine('Running recovery routine…');
+    addLine('Re-aligning Fusang driver…  synced');
+    addLine('Re-checking integrity…  OK');
+    integrity = 'PASS'; markSync(); refreshSubtitle();
+
+    // ADD: make sure hum can’t come back after recovery
+    killAllBgAudio();
+
+    const BURSTS = 2 + Math.floor(Math.random()*3);
+    const GAP    = 200 + Math.floor(Math.random()*200);
+    for (let b=0; b<BURSTS; b++){
+      setTimeout(()=>{
+        tvGlitch(); sliceBurst(); screenPop();
+        const lines = Array.from(document.querySelectorAll('.term .line')).slice(-3);
+        lines.forEach(el => el.classList.add('rgb-split','blur-hit'));
+        setTimeout(()=> lines.forEach(el => el.classList.remove('rgb-split','blur-hit')), 220);
+      }, b*GAP);
+    }
+    const totalAftershock = BURSTS*GAP + 250;
+    setTimeout(()=>{
+      document.querySelectorAll('.slice').forEach(s => s.remove());
+      if (screen && screen.style) screen.style.transform = '';
+      window.chaosDisabled = true;
+    }, totalAftershock);
+
+    window.postRetryUntil = Date.now() + 2000;
+    window.resumeTarget   = Math.max(prog, 70);
+    window.resumeSlow     = true;
+
+    paused = false;
+    recovered = true;
+    setTimeout(step, totalAftershock + 50);
+    mechProgress();
+  });
+
+  function step(){
+    if (paused) return;
+    if (idx < BOOT_LINES.length){
+      const line = BOOT_LINES[idx];
+      addLine(line);
+      if (/Telemetry ping/i.test(line) || /merged|reconciled|synced|engaged|Calibrating|Mounting volumes/i.test(line)){
+        markSync(); refreshSubtitle();
+      }
+      idx++;
+      if(!faultRaised && idx === faultIndex){ raiseFault(); return; }
+      setTimeout(step, nextDelay());
+    } else {
+      linesDone = true;
+      setTimeout(()=>{ allowComplete = true; }, 1200);
+    }
+  }
+
+  function showLogin(){
+    if (!linesDone || !progressDone) return;
+    try{ if (humA){ humA.pause(); humA.currentTime = 0; } }catch{}
+    try{ if (humB){ humB.pause(); humB.currentTime = 0; } }catch{}
+
+    // ADD: permanently silence/lock bg audio before login UI appears
+    killAllBgAudio();
+
+    if (welcome) welcome.style.display = 'block';
+    const ping = document.getElementById('loginPing'); if (ping){ try{ ping.currentTime = 0; ping.play(); }catch{} }
+    const uid = document.getElementById('uid'); if (uid) setTimeout(()=> uid.focus(), 30);
+  }
+
+  function mechProgress(){
+    if (paused){ setTimeout(mechProgress, 250); return; }
+    if (window.postRetryUntil && Date.now() < window.postRetryUntil) {
+      if (bar) bar.style.width = prog + '%'; if (pct) pct.textContent = prog + '%';
+      setTimeout(mechProgress, 280); return;
+    } else if (window.postRetryUntil) { window.postRetryUntil = null; }
+
+    const cap = allowComplete ? 100 : 99;
+    if (prog < cap) {
+      let delta = Math.floor(Math.random() * 7) + 1;
+      if (window.resumeSlow) {
+        if (typeof window.resumeTarget === 'number' && prog < window.resumeTarget) { delta = 1; }
+        else { window.resumeSlow = false; }
+      }
+      if (!allowComplete && prog >= 89 && prog < 99) {
+        const t = Math.min(1, Math.max(0, (prog - 89) / 10));
+        const stallProb = 0.70 + 0.28 * (t * t);
+        if (Math.random() < stallProb) delta = 0;
+        const maxStep = 1 + Math.floor(3 * (1 - t));
+        if (delta > maxStep) delta = maxStep;
+        if (prog < 96 && Math.random() < 0.08) prog = Math.max(0, prog - 1);
+      }
+      if (prog < 90 && Math.random() < 0.14) {
+        prog = Math.max(0, prog - Math.floor(Math.random() * 3));
+      }
+      prog = Math.min(cap, prog + delta);
+      if (bar) { bar.style.width = prog + '%'; bar.parentElement?.setAttribute('aria-valuenow', String(prog)); }
+      if (pct) pct.textContent = prog + '%';
+
+      if (!window.chaosDisabled) {
+        if (Math.random() < 0.30) sliceBurst();
+        if (Math.random() < 0.35) tvGlitch();
+        if (Math.random() < 0.80) screenPop();
+      }
+      setTimeout(mechProgress, 280 + Math.random()*620);
+      return;
+    }
+
+    if (prog === 99 && !allowComplete) { setTimeout(mechProgress, 400); return; }
+    if (allowComplete && prog < 100) {
+      prog = 100;
+      if (bar) bar.style.width = '100%';
+      if (pct) pct.textContent = '100%';
+      progressDone = true;
+      setTimeout(showLogin, 800);
+    }
+  }
+
+  (function initialBlackFade(){
+    const fade = document.getElementById('bootFade');
+    if (!fade) return;
+    setTimeout(() => {
+      fade.classList.add('hide');
+      setTimeout(() => { try { fade.remove(); } catch {} }, 900);
+    }, 1500);
+  })();
+
+  // Helper to parse invite_token from hash or query
+  function getInviteToken(){
+    const q = new URLSearchParams(location.search);
+    const h = new URLSearchParams((location.hash||'').replace(/^#/,''));
+    return q.get('invite_token') || h.get('invite_token') || null;
+  }
+
+  window.addEventListener('startBoot', () => {
+  const fade = document.getElementById('bootFade');
+  if (fade) {
+    fade.classList.add('hide');
+    setTimeout(() => { try { fade.remove(); } catch {} }, 900);
+  }
+  try {
+    if (window._allowHum) {
+      if (humA) { humA.muted = false; humA.volume = 0.35; humA.loop = true; humA.play?.().catch(()=>{}); }
+      if (humB) { humB.muted = false; humB.volume = 0.25; humB.play?.().catch(()=>{}); }
+    }
+  } catch {}
+  setTimeout(step, 400);
+  mechProgress();
+});
+
+  // FIX: safety nets to ensure login appears
+  setInterval(()=>{ if (linesDone && !allowComplete) allowComplete = true; }, 10000);
+  setInterval(()=>{ if (linesDone && prog>=100 && welcome && welcome.style.display!=='block'){ progressDone = true; showLogin(); } }, 2000);
+
+// === Auto-start rules ===
+const autostart = getInviteToken() || paramsAll.get('autostart') === '1' || hashParams.get('autostart') === '1';
+if (autostart) {
+  // Remove/Hide gate and start immediately so widget isn't blocked by overlay
+  const gate = document.getElementById('nxGate');
+  if (gate) {
+    gate.classList.add('hidden');
+    setTimeout(() => {
+      try { gate.remove(); } catch {}
+
+      // Allow the background hum for autostart flows and kick it once
+      window._allowHum = true;   // permit hum
+      window.humBlocked = false; // in case it was locked earlier
+      try { ensureHum(); } catch {}
+
+      window.dispatchEvent(new Event('startBoot'));
+    }, 50);
+  }
+}
+})();  
+</script>
+
+<!-- === Netlify Identity / Auth (GoTrue) === -->
+<script src="https://cdn.jsdelivr.net/npm/gotrue-js@0.9.29/dist/gotrue.min.js"></script>
+<script>
+// Minimal in-page auth: defines window.auth even if external file is missing
+(function(){
+  function makeAuth(){
+    try {
+      const base = `${location.origin}/.netlify/identity`;
+      const client = new window.gotrue.Gotrue({ APIUrl: base, setCookie: true });
+      return {
+        _client: client,
+        login: (email, pass) => client.login(email, pass, true),
+        acceptInvite: (token, pass) => client.acceptInvite(token, pass, true),
+        currentUser: () => client.currentUser(),
+        signup: (email, pass) => client.signup(email, pass)
+      };
+    } catch (e) {
+      console.warn('[auth] GoTrue not available', e); return null;
+    }
+  }
+  if (!window.auth) window.auth = makeAuth();
+})();
+</script>
+
+<!-- (Optional) External auth helpers; safe if missing -->
+<script src="/assets/js/auth.js" defer></script>
+
+<!-- Identity widget to auto-handle #invite_token -->
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script>
+// Widget init + invite-token flow improvements
+(function(){
+  const hasToken = (()=>{
+    const q = new URLSearchParams(location.search);
+    const h = new URLSearchParams((location.hash||'').replace(/^#/,''));
+    return q.has('invite_token') || h.has('invite_token');
+  })();
+
+  function initWidget(){
+    try { if (window.netlifyIdentity) window.netlifyIdentity.init(); } catch(e){ console.warn('[identity.init] failed', e); }
+  }
+
+  // Start boot automatically when user clicks gate
+  (function setupNaoxinGate(){
+    const gate = document.getElementById('nxGate');
+    const btn  = document.getElementById('nxGateBtn');
+    if (!gate || !btn) return;
+
+    async function unlockAudio(el, volume=1){
+      if (!el) return; try { el.load?.(); el.muted = false; el.volume = volume; const p = el.play?.(); if (p && p.then) await p.catch(()=>{}); el.pause?.(); el.currentTime = 0; } catch {}
+    }
+    async function primeBootAudio(){
+      const humA = document.getElementById('bootHum') || document.getElementById('bootHumA');
+      const humB = document.getElementById('bootHumB');
+      await Promise.all([ unlockAudio(humA, 0.35), unlockAudio(humB, 0.25) ]);
+     // allow background hum only when explicitly enabled by the gate button
+window._allowHum = false;
+    }
+
+    btn.addEventListener('click', async () => {
+  try{ sessionStorage.setItem('fromPreboot','1'); }catch{}
+  await primeBootAudio();
+
+  // allow hum ONLY now (via the gate), and kick it once
+  window._allowHum = true;
+  window.humBlocked = false;
+  try { ensureHum(); } catch {}
+
+  gate.classList.add('hidden');
+  setTimeout(() => {
+    try { gate.remove(); } catch {}
+    setTimeout(() => { window.dispatchEvent(new Event('startBoot')); }, 200);
+  }, 240);
+}, { once: true });
+
+    // If an invite_token is present, auto-hide gate so widget/modal is clickable
+    if (hasToken) {
+      gate.classList.add('hidden');
+      setTimeout(()=>{ try{ gate.remove(); }catch{}; setTimeout(()=> window.dispatchEvent(new Event('startBoot')), 50); }, 150);
+    }
+  })();
+
+  // Ensure widget mounts
+  document.addEventListener('DOMContentLoaded', initWidget);
+})();
+</script>
+
+<!-- Fallback: Manual acceptInvite if widget doesn't open -->
+<script>
+(function(){
+  function getToken(){
+    const m = (location.hash||'').match(/invite_token=([^&]+)/); if (m) return decodeURIComponent(m[1]);
+    const q = new URLSearchParams(location.search); if (q.has('invite_token')) return q.get('invite_token');
+    return null;
+  }
+  function whenAuthReady(fn, retries=100){
+    if (window.auth && typeof window.auth.acceptInvite === 'function') return fn();
+    if (retries <= 0) return console.warn('[invite] auth not ready');
+    setTimeout(()=> whenAuthReady(fn, retries-1), 100);
+  }
+
+  const token = getToken();
+  if (!token) return;
+
+  // If widget shows a proper set-password screen, great; otherwise prompt-based fallback
+  // Give the widget ~4s to appear first
+  setTimeout(()=>{
+    const widgetVisible = !!document.querySelector('[data-netlify-identity-button], .netlify-identity-widget, iframe[src*="identity.netlify"]');
+    if (widgetVisible) return; // Let widget handle
+
+    whenAuthReady(async ()=>{
+      const pw = prompt('Set a password to accept your invite:');
+      if (!pw) return;
+      try {
+        await window.auth.acceptInvite(token, pw);
+        alert('Invite accepted. Redirecting…');
+        location.href = '/dashboard.html';
+      } catch (e) {
+        console.error(e);
+        alert((e && e.json && e.json.error_description) || 'Invite acceptance failed.');
+      }
+    });
+  }, 4000);
+})();
+</script>
+
+<!-- Simple Login Handler (uses window.auth / GoTrue) -->
+<script>
+(function(){
+  const form = document.getElementById('authForm');
+  if (!form) return;
+  const emailEl = document.getElementById('uid');
+  const passEl  = document.getElementById('pass');
+  const msgEl   = document.getElementById('authMsg');
+
+  function setMsg(t){ if (msgEl) msgEl.textContent = t || ''; }
+
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const email = (emailEl?.value||'').trim();
+    const pass  = passEl?.value||'';
+    if (!email || !pass) { setMsg('Enter email and password.'); return; }
+
+    setMsg('Authenticating…');
+    try {
+      if (!window.auth || !window.auth.login) throw new Error('Auth not ready');
+      const user = await window.auth.login(email, pass);
+      setMsg('Success. Redirecting…');
+      setTimeout(()=>{ location.href = '/dashboard.html'; }, 500);
+    } catch (err) {
+      console.error('[login]', err);
+      let m = 'Login failed.';
+      try { if (err && err.json && err.json.error_description) m = err.json.error_description; } catch {}
+      setMsg(m);
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

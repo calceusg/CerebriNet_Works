@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CerebriNet - Initial Diagnostics</title>
+
+<!-- Invite forwarder: if an invite hits the homepage, jump to /accessgate -->
+<script>
+  (function () {
+    var h = location.hash || "";
+    if (h.indexOf("invite_token=") !== -1) {
+      location.replace("/accessgate" + h); // keep the hash token
+    }
+  })();
+</script>
+
+<style>
+#finalBig {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+
+  :root{ --bg:#0a120a; --bg2:#0c160c; --phos:#17f45a; }
+  html,body{
+    height:100%; margin:0;
+    background: radial-gradient(1600px 900px at 50% -10%, var(--bg2), var(--bg));
+    color:var(--phos);
+    font-family: Monofonto, 'VT323','Share Tech Mono','IBM Plex Mono',monospace;
+    letter-spacing:.35px; overflow:hidden;
+  }
+  .wrap{position:fixed; inset:0; overflow:hidden;}
+  svg{display:block}
+  .crtLine{
+    position:absolute; left:0; right:0; top:50%; height:2px;
+    background:linear-gradient(90deg, transparent, #caffd8, #17f45a, #caffd8, transparent);
+    box-shadow:0 0 10px #17f45a, 0 0 24px rgba(23,244,90,.65); opacity:0; pointer-events:none;
+  }
+  .scanBG{
+    position:fixed; inset:0; pointer-events:none; opacity:.12; mix-blend-mode:screen;
+    background-image: linear-gradient(to bottom, rgba(23,244,90,.22) 1px, transparent 1px);
+    background-size: 100% 2px;
+    animation: scanDrift 12s linear infinite;
+    clip-path: inset(0 0 100% 0); -webkit-clip-path: inset(0 0 100% 0);
+  }
+  @keyframes scanDrift{ 0%{ transform: translateY(0); } 100%{ transform: translateY(2px); } }
+  .noise{
+    position:fixed; inset:0; pointer-events:none; opacity:.08; mix-blend-mode:screen;
+    background:
+      repeating-linear-gradient(0deg, rgba(23,244,90,.24) 0 1px, transparent 1px 3px),
+      repeating-linear-gradient(90deg, rgba(23,244,90,.12) 0 2px, transparent 2px 4px);
+    animation:stat 140ms steps(2,end) infinite;
+  }
+  @keyframes stat{ 50%{ background-position:0 2px, 2px 0; } }
+  .slice{
+    position:absolute; left:-6vw; right:-6vw; height:18px;
+    background:linear-gradient(90deg, rgba(23,244,90,.12), rgba(23,244,90,.35), rgba(23,244,90,.12));
+    mix-blend-mode:screen; opacity:.32; pointer-events:none;
+  }
+  .rgb-strong *{ text-shadow: -5px 0 rgba(255,0,0,.45), 5px 0 rgba(0,200,255,.45), 0 0 3px rgba(23,244,90,.55); }
+  .blur-hit{ filter: blur(0.7px) contrast(1.08); }
+  .gate{
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(5,14,7,.55); cursor:pointer; z-index:2147483647; user-select:none; pointer-events:auto;
+  }
+  .gateInner{ text-decoration:none; } .gateInner:link, .gateInner:visited, .gateInner:hover, .gateInner:active{ text-decoration:none; } 
+  .gateInner{
+    padding:14px 22px; border:2px solid rgba(23,244,90,.45);
+    color:#17f45a; font-size:clamp(16px,2.6vmin,28px); letter-spacing:2px;
+    text-shadow:0 0 6px rgba(23,244,90,.35), 0 0 14px rgba(23,244,90,.16);
+    box-shadow:0 0 18px rgba(23,244,90,.18) inset, 0 0 12px rgba(23,244,90,.12);
+    background:rgba(2,10,5,.45);
+    animation:pulse 1.4s ease-in-out infinite;
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="noise" id="noise"></div>
+  <div class="scanBG" id="scanBG"></div>
+
+  <svg id="stage" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"
+       style="position:fixed;inset:0;width:100%;height:100%;filter:drop-shadow(0 0 24px rgba(23,244,90,.14))">
+    <defs>
+      <clipPath id="revealClip" clipPathUnits="userSpaceOnUse">
+        <rect id="revealRect" x="0" y="0" width="100" height="0"/>
+      </clipPath>
+      <linearGradient id="waveGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stop-color="#17f45a" stop-opacity="0"/>
+        <stop offset="50%"  stop-color="#17f45a" stop-opacity="0"/>
+        <stop offset="100%" stop-color="#17f45a" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+
+    <rect id="waveHi" x="0" y="-12" width="100" height="24" fill="url(#waveGrad)" opacity="0"/>
+
+    <g id="overlay" clip-path="url(#revealClip)">
+      <g id="logo" transform="translate(50,44) scale(0.44)">
+        <g stroke="#17f45a" fill="none" stroke-linecap="round">
+          <circle cx="0" cy="0" r="46" stroke-width="2.8"/>
+          <circle cx="0" cy="0" r="39" stroke-width="2.0" opacity=".9"/>
+          <circle cx="0" cy="-10" r="28" stroke-width="2.4"/>
+          <circle cx="0" cy="12"  r="28" stroke-width="2.4"/>
+          <circle cx="0" cy="0"   r="9.5" stroke-width="2.0"/>
+        </g>
+      </g>
+
+      <text id="cap" x="50" y="80" text-anchor="middle" font-size="3.0" fill="#17f45a"
+            style="letter-spacing:.18px; text-shadow: 0 0 2px rgba(23,244,90,.35), 0 0 6px rgba(23,244,90,.18);"></text>
+      <text id="f1" x="50" y="85" text-anchor="middle" font-size="2.6" fill="#17f45a" opacity=".9"></text>
+      <text id="f2" x="50" y="89" text-anchor="middle" font-size="2.6" fill="#17f45a" opacity=".9"></text>
+      <text id="f3" x="50" y="93" text-anchor="middle" font-size="2.6" fill="#17f45a" opacity=".9"></text>
+
+      <!-- final big text: perfectly centered -->
+      <text id="finalBig" x="51" y="80" text-anchor="middle" dominant-baseline="central"
+            font-size="7.2" fill="#17f45a"
+            style="letter-spacing:.28px; text-shadow: 0 0 4px rgba(23,244,90,.45), 0 0 10px rgba(23,244,90,.25); opacity:0;"></text>
+    </g>
+  </svg>
+
+  <!-- CerebriNet cue message (hidden until the cue fires) -->
+  <div id="cerebriCue"
+       style="position:absolute; left:50%; top:74%; transform:translate(-50%,-50%);
+              font-size:3vmin; letter-spacing:.18em; opacity:0; transition:opacity .18s ease;
+              text-shadow:0 0 6px rgba(23,244,90,.35), 0 0 14px rgba(23,244,90,.16);">
+    CEREBRINET OS // v12.8.25
+  </div>
+
+  <div class="crtLine" id="crtLine"></div>
+</div>
+
+<!-- Swappable audio files (hum & chime stay) -->
+<audio id="bootChime" preload="auto" muted playsinline>
+  <source src="boot-chime-warfall.wav" type="audio/wav">
+</audio>
+<audio id="bootHumA" preload="auto" playsinline>
+  <source src="boot-hum-warfall-1mb.wav" type="audio/wav">
+</audio>
+<audio id="bootHumB" preload="auto" playsinline>
+  <source src="boot-hum-warfall-1mb.wav" type="audio/wav">
+</audio>
+<audio id="closeSound" preload="auto" playsinline>
+  <source src="close-sound.wav" type="audio/wav">
+</audio>
+
+<!-- Razer Green key click sample pool (put files in clicks/ folder) -->
+<div id="clickPool" style="display:none">
+  <audio class="keyClick" preload="auto" src="clicks/razer-green-01.wav"></audio>
+  <audio class="keyClick" preload="auto" src="clicks/razer-green-02.wav"></audio>
+  <audio class="keyClick" preload="auto" src="clicks/razer-green-03.wav"></audio>
+  <audio class="keyClick" preload="auto" src="clicks/razer-green-04.wav"></audio>
+  <audio class="keyClick" preload="auto" src="clicks/razer-green-05.wav"></audio>
+  <audio class="keyClick" preload="auto" src="clicks/razer-green-06.wav"></audio>
+  <audio class="keyClick" preload="auto" src="clicks/razer-green-07.wav"></audio>
+  <audio class="keyClick" preload="auto" src="clicks/razer-green-08.wav"></audio>
+</div>
+
+<!-- Click Gate -->
+<div class="gate" id="gate" role="button" tabindex="0" aria-label="Start preboot">
+  <div class="gateInner">INITIATE INITIAL DIAGNOSTICS</div>
+</div>
+
+<!-- Main page logic -->
+<script>
+(function(){
+  "use strict";
+
+  // ===== Scene strings & redirect =====
+  const WAVE_MS = 12000;
+  const COLLAPSE_MS = 2000;
+  const REDIRECT_TO = "AccessGate.html"; // exists below
+  const sCap = "DIANNAO SYSTEMS // MODEL E-25 — INITIALIZING INTERFACE";
+  const s1 = "Startup: core hardware initialization…";
+  const s2 = "Diagnostic link establishing…";
+  const s3 = "Configuring access channel and interface booting...";
+  const sFinal = "INTERFACE READY";
+  const closeSound = document.getElementById('closeSound');
+
+  // === Robot typing knobs ===
+  const CLICK_GAIN = 0.8;
+  const CLICK_VARIANCE = 0.25;
+  const RATE_VARIANCE = 0.10;
+  const ROBOT_JITTER_MS = 4;
+  const BURST_KEYS_MIN = 8, BURST_KEYS_MAX = 12;
+  const BURST_SPACING_MIN = 30, BURST_SPACING_MAX = 45;
+  const BASE_MIN = 60, BASE_MAX = 85; // non-burst per-char ms
+
+  // ===== Seamless hum A/B =====
+  const HUM_VOL = 1.0, HUM_VOL_DUCKED = 0.075, XFADE_S = 0.40;
+  const humA = document.getElementById('bootHumA');
+  const humB = document.getElementById('bootHumB');
+  const chime = document.getElementById('bootChime');
+function startChime(){
+  if (!chime) return;
+  try{
+    chime.currentTime = 0;
+    chime.volume = 0;
+    chime.muted = true;
+    const p = chime.play();
+    if (p && p.then){
+      p.then(()=>{
+        // unmute shortly after playback starts to avoid some browser quirks
+        setTimeout(()=>{ try{ chime.muted = false; }catch{} }, 140);
+        // fade chime in
+        let v = 0;
+        const id = setInterval(()=>{
+          v += 0.06;
+          chime.volume = Math.min(1, v);
+          if (v >= 1) clearInterval(id);
+        }, 70);
+      }).catch(()=>{});
+    }
+  }catch{}
+}
+  let humStarted = false;
+
+  // ===== Razer Green sample player =====
+  const pool = Array.from(document.querySelectorAll('#clickPool .keyClick')).filter(a => a.src);
+  function playKeyClick(){
+    if (!pool.length) return;
+    const proto = pool[Math.floor(Math.random()*pool.length)];
+    const el = proto.cloneNode(true);
+    const volBase = CLICK_GAIN;
+    const volJit = (Math.random()*2 - 1) * CLICK_VARIANCE * 0.5;
+    el.volume = Math.max(0, Math.min(1, volBase + volJit));
+    const rateJit = (Math.random()*2 - 1) * RATE_VARIANCE;
+    el.playbackRate = 1.0 + rateJit;
+    try{ el.currentTime = Math.random()*0.01; }catch{}
+    el.addEventListener('ended', ()=> el.remove());
+    el.addEventListener('error', ()=> el.remove());
+    document.getElementById('clickPool').appendChild(el);
+    el.play().catch(()=>{ el.remove(); });
+  }
+
+  function typeLine(el, text, speed, pauseAfter, done){
+    if(!el) { done&&done(); return; }
+    el.textContent="";
+    let i=0;
+    let lastBurstAt = -9999;
+
+    function scheduleChar(delay){
+      setTimeout(()=>{
+        if (i <= text.length){
+          el.textContent = text.slice(0,i++);
+          playKeyClick();
+        }
+      }, Math.max(0, delay));
+    }
+
+    (function next(){
+      if (i <= text.length){
+        // Burst mode (machine speed)
+        if (Math.random() < 0.18 && (performance.now() - lastBurstAt) > 600){
+          const k = Math.floor(Math.random()*(BURST_KEYS_MAX-BURST_KEYS_MIN+1))+BURST_KEYS_MIN;
+          const spacing = Math.floor(Math.random()*(BURST_SPACING_MAX-BURST_SPACING_MIN+1))+BURST_SPACING_MIN;
+          lastBurstAt = performance.now();
+          let acc = 0;
+          for (let j=0;j<k && i<=text.length;j++){
+            const jitter = ((Math.random()*2 - 1) * ROBOT_JITTER_MS);
+            scheduleChar(acc + jitter);
+            acc += spacing;
+          }
+          setTimeout(next, acc + 10);
+          return;
+        }
+        // Quantized steady pace with tiny jitter
+        const gap = Math.floor(Math.random()*(BASE_MAX-BASE_MIN+1))+BASE_MIN;
+        const jitter = ((Math.random()*2 - 1) * ROBOT_JITTER_MS);
+        scheduleChar(gap + jitter);
+        setTimeout(next, gap + Math.max(0, jitter));
+      } else {
+        setTimeout(()=> done&&done(), pauseAfter);
+      }
+    })();
+  }
+
+  function fade(el, from, to, dur){
+    if (!el) return;
+    const steps = Math.max(3, Math.floor(dur*60)), dt = dur/steps;
+    let i=0; el.volume = from;
+    const id = setInterval(()=>{
+      i++; const t = i/steps; el.volume = from + (to-from)*t;
+      if (i>=steps){ el.volume = to; clearInterval(id); }
+    }, dt*1000);
+  }
+
+  function showCerebriCue(){
+  const el = document.getElementById('cerebriCue');
+  if (!el) return;
+  el.style.opacity = '1';
+  try {
+    fade(humA, humA?.volume ?? 0.35, HUM_VOL, 0.35);
+    fade(humB, humB?.volume ?? 0.25, HUM_VOL, 0.35);
+  } catch {}
+  setTimeout(()=>{ el.style.opacity = '0'; }, 5600);
+}
+
+  function startHum(initialTarget = HUM_VOL){
+  if (humStarted || !humA || !humB) return;
+  humStarted = true;
+
+  [humA, humB].forEach(h => { try { h.loop = false; h.volume = 0; } catch {} });
+
+  const playA = ()=>{ try { humA.currentTime = 0; humA.play(); } catch {} };
+  const playB = ()=>{ try { humB.currentTime = 0; humB.play(); } catch {} };
+  const pauseA= ()=>{ try { humA.pause(); } catch {} };
+  const pauseB= ()=>{ try { humB.pause(); } catch {} };
+
+  let guardA = null, guardB = null;
+
+  function scheduleA(){
+    // initial fade uses the ducked target while chime is playing
+    fade(humA, humA.volume, initialTarget, 0.28);
+    fade(humB, humB.volume, 0.0, 0.18);
+
+    guardA && clearInterval(guardA);
+    guardA = setInterval(()=>{
+      const d = humA.duration || 0; if (!d) return;
+      if (humA.currentTime >= Math.max(0, d - XFADE_S)){
+        clearInterval(guardA);
+        playB();
+        // subsequent crossfades go to full HUM_VOL
+        fade(humB, humB.volume, HUM_VOL, XFADE_S);
+        fade(humA, humA.volume, 0.0,      XFADE_S);
+        const once = ()=>{
+          humA.removeEventListener('ended', once);
+          try { humA.currentTime = 0; } catch {};
+          pauseA();
+          scheduleB();
+        };
+        humA.addEventListener('ended', once, { once:true });
+      }
+    }, 20);
+  }
+
+  function scheduleB(){
+    guardB && clearInterval(guardB);
+    guardB = setInterval(()=>{
+      const d = humB.duration || 0; if (!d) return;
+      if (humB.currentTime >= Math.max(0, d - XFADE_S)){
+        clearInterval(guardB);
+        playA();
+        fade(humA, humA.volume, HUM_VOL, XFADE_S);
+        fade(humB, humB.volume, 0.0,      XFADE_S);
+        const once = ()=>{
+          humB.removeEventListener('ended', once);
+          try { humB.currentTime = 0; } catch {};
+          pauseB();
+          scheduleA();
+        };
+        humB.addEventListener('ended', once, { once:true });
+      }
+    }, 20);
+  }
+
+  // kick it off
+  playA();
+  scheduleA();
+}
+
+  function goBoot(){
+  try{ sessionStorage.setItem('fromPreboot','1'); }catch{}
+
+  // Show black screen
+  document.body.style.background = "black";
+  document.body.innerHTML = ""; // optional: clear everything from screen
+  document.body.style.opacity = "1";
+
+  // Wait 2.5 seconds before redirecting
+  setTimeout(() => {
+    try{ window.location.replace(REDIRECT_TO); }
+    catch{ window.location.href = REDIRECT_TO; }
+  }, 1500);
+}
+
+  function showFinalThenExit(){
+  const stage = document.getElementById('stage');
+  const crt = document.getElementById('crtLine');
+  window.stopGlitching = true;
+  ['cap','f1','f2','f3'].forEach(id => { const n = document.getElementById(id); if (n) n.style.opacity = '0'; });
+  const finalBig = document.getElementById('finalBig');
+  finalBig.textContent = sFinal;
+  finalBig.style.transition = 'opacity .32s ease, transform .5s cubic-bezier(.2,.6,.15,1)';
+  finalBig.style.opacity = '1'; 
+  finalBig.style.transform = 'scale(1.05)';
+  // ensure visible
+  finalBig.removeAttribute('hidden');
+  finalBig.style.display = 'block';
+  finalBig.setAttribute('opacity','1');
+  finalBig.style.visibility = 'visible';
+
+  // collapse animation window
+  setTimeout(()=>{
+    if (stage){
+      stage.style.transformOrigin='50% 50%';
+      stage.style.transition='transform 1.7s cubic-bezier(.2,.6,.15,1)';
+      stage.style.transform='scaleY(0.02)';
+    }
+    if (crt){
+      crt.style.transition='opacity .8s ease .5s';
+      crt.style.opacity='1';
+    }
+
+    // final fade + closing sound + redirect
+    setTimeout(() => {
+      try { chime && chime.pause(); } catch {}
+      try { humA && humA.pause(); humB && humB.pause(); } catch {}
+
+      // Fade out the UI
+      document.body.style.transition = 'opacity .28s ease';
+      document.body.style.opacity = '0';
+
+      // Play the short closing sound and then exit
+      let fired = false;
+      const safeGoBoot = () => { if (fired) return; fired = true; goBoot(); };
+
+      try {
+        if (closeSound) {
+          closeSound.currentTime = 0;
+          // Optional loudness:
+          // closeSound.volume = 1;
+
+          const p = closeSound.play?.();
+
+          // Exit when the sound ends
+          closeSound.addEventListener('ended', safeGoBoot, { once: true });
+
+          // Fallback in case metadata isn't ready or playback is blocked
+          const d = Number.isFinite(closeSound.duration) ? closeSound.duration * 1000 : 400;
+          setTimeout(safeGoBoot, Math.min(2000, Math.max(250, d + 60)));
+
+          if (p && typeof p.catch === 'function') p.catch(() => {});
+        } else {
+          setTimeout(safeGoBoot, 400);
+        }
+      } catch {
+        setTimeout(safeGoBoot, 400);
+      }
+    }, 0); // start sound immediately at collaspe start
+  }, 1400);   // ✅ outer timeout properly closed
+}
+
+  function spawnSlice(){
+    const wrap = document.getElementById('wrap');
+    const s = document.createElement('div');
+    s.className = 'slice';
+    const top = Math.random()*100;
+    s.style.top = 'calc(' + top.toFixed(2) + 'vh)';
+    s.style.transform = 'translateX(' + (Math.random()<.5?'-':'') + (Math.random()*4).toFixed(1) + 'vw)';
+    s.style.height = (10 + Math.random()*26).toFixed(0) + 'px';
+    s.style.opacity = (0.16 + Math.random()*0.36).toFixed(2);
+    const life = 320 + Math.random()*520;
+    wrap.appendChild(s);
+    setTimeout(()=> s.remove(), life);
+  }
+
+  function begin(){
+    if (window.__started) return; window.__started = true;
+    const g = document.getElementById('gate'); if (g){ g.classList.add('hidden'); setTimeout(()=> g.remove(), 280); }
+
+    // Start both together: chime + ducked hum
+startChime();
+startHum(HUM_VOL_DUCKED);
+
+// === CerebriNet cue sync (timestamp) ===
+// Adjust this until the text lines up with the spoken “CerebriNet”
+const CEREBRI_CUE_MS = 1950; 
+if (chime) {
+  chime.addEventListener('play', () => {
+    setTimeout(showCerebriCue, CEREBRI_CUE_MS);
+  }, { once:true });
+}
+
+// When the chime finishes, fade the hum up to full target
+if (chime) {
+  chime.addEventListener('ended', () => {
+    fade(humA, humA.volume, HUM_VOL, 0.35);
+    fade(humB, humB.volume, HUM_VOL, 0.35);
+  }, { once: true });
+}
+
+// Preload + unlock closeSound so it's ready at the end
+try {
+  if (closeSound) {
+    closeSound.load();                 // ensure metadata kicks in
+    closeSound.volume = 1;             // make sure it's audible
+    closeSound.muted = true;           // silent prewarm
+    const p = closeSound.play?.();     // start a tiny play to "unlock" it
+    if (p && p.then) {
+      p.then(() => {
+        closeSound.pause();
+        closeSound.currentTime = 0;
+        closeSound.muted = false;      // ready to actually play later
+      }).catch(()=>{ closeSound.muted = false; });
+    } else {
+      // if play() didn't return a promise, still reset
+      closeSound.pause?.();
+      closeSound.currentTime = 0;
+      closeSound.muted = false;
+    }
+  }
+} catch {}
+
+    const revealRect = document.getElementById('revealRect');
+    const waveHi = document.getElementById('waveHi');
+    const wrap = document.getElementById('wrap');
+    const overlay = document.getElementById('overlay');
+    const logo = document.getElementById('logo');
+    const cap = document.getElementById('cap');
+    const f1 = document.getElementById('f1');
+    const f2 = document.getElementById('f2');
+    const f3 = document.getElementById('f3');
+    const cerebriCue = document.getElementById('cerebriCue');
+
+    const t0 = performance.now();
+    function loop(){
+      const t = performance.now() - t0;
+      const pct = Math.min(1, t / WAVE_MS);
+      const h = (pct * 110);
+      if (revealRect){ revealRect.setAttribute('height', h.toFixed(3)); }
+      if (waveHi){ waveHi.setAttribute('y', (h - 12).toFixed(3)); }
+      const scanBG = document.getElementById('scanBG');
+      if (scanBG){
+        const reveal = Math.max(0, Math.min(100, h));
+        const bottomInset = (100 - reveal).toFixed(2) + '%';
+        scanBG.style.clipPath = 'inset(0 0 ' + bottomInset + ' 0)';
+        scanBG.style.webkitClipPath = 'inset(0 0 ' + bottomInset + ' 0)';
+      }
+      if (!window.stopGlitching){
+        const r = Math.random();
+        if (r < 0.06){ wrap.classList.add('rgb-strong'); setTimeout(()=> wrap.classList.remove('rgb-strong'), 160); }
+        else if (r < 0.12){ overlay.classList.add('blur-hit'); setTimeout(()=> overlay.classList.remove('blur-hit'), 160); }
+        else if (r < 0.18){
+          const dx = (Math.random()*2-1)*1.2,
+      dy = (Math.random()*2-1)*1.2;
+const s  = 0.44 + (Math.random()*0.03-0.015);
+
+// base position (tweak these)
+const BASE_X = 50; // higher = right, lower = left
+const BASE_Y = 47.5; // higher = down, lower = up 
+
+          if (logo) {
+  logo.setAttribute(
+    'transform',
+    `translate(${BASE_X + dx},${BASE_Y + dy}) scale(${s.toFixed(3)})`
+  );
+  setTimeout(() => {
+    logo.setAttribute(
+      'transform',
+      `translate(${BASE_X},${BASE_Y}) scale(0.44)`
+    );
+  }, 150);
+}
+
+        }
+        if (Math.random() < 0.10){ spawnSlice(); }
+      }
+      if (t < WAVE_MS + COLLAPSE_MS + 900) requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    setTimeout(()=>{
+      typeLine(cap, sCap, 70, 700, ()=>{
+        typeLine(f1, s1, 78, 700, ()=>{
+          typeLine(f2, s2, 85, 700, ()=>{
+            typeLine(f3, s3, 92, 1000, ()=>{
+              showFinalThenExit();
+            });
+          });
+        });
+      });
+    }, Math.floor(WAVE_MS*0.72));
+  }
+
+  function wire(){
+    const gate = document.getElementById('gate');
+    if (gate){
+      gate.addEventListener('click', begin);
+      gate.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') begin(); });
+    }
+  }
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', wire, { once:true });
+  } else { wire(); }
+})(); 
+
+</script>
+</body>
+</html>

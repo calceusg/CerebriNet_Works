@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CerebriNetworks — Sign In</title>
+  <link rel="stylesheet" href="/assets/css/auth.css" />
+  <script src="https://cdn.jsdelivr.net/npm/gotrue-js@0.9.29/dist/gotrue.min.js"></script>
+  <script src="/assets/js/auth.js" defer></script>
+</head>
+<body class="auth-body">
+  <main class="auth-card">
+    <h1>Sign in</h1>
+    <p class="muted">Use your invited email + password.</p>
+
+    <form id="loginForm" class="stack">
+      <label>Email
+        <input type="email" id="email" required autocomplete="email" />
+      </label>
+      <label>Password
+        <input type="password" id="password" required autocomplete="current-password" />
+      </label>
+      <button id="submitBtn" type="submit">Sign in</button>
+    </form>
+
+    <div class="row space-between">
+      <a href="/" class="link">&larr; Back to site</a>
+      <button id="useWidget" class="link-btn" type="button">Use popup instead</button>
+    </div>
+
+    <p id="status" role="status" class="status" aria-live="polite"></p>
+  </main>
+
+  <!-- Optional: include Netlify Identity Widget for the popup fallback -->
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script>
+    document.getElementById('useWidget').addEventListener('click', function () {
+      if (window.netlifyIdentity) {
+        netlifyIdentity.init();
+        netlifyIdentity.open('login');
+      } else {
+        alert('Identity widget failed to load.');
+      }
+    });
+
+    document.getElementById('loginForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const status = document.getElementById('status');
+      const btn = document.getElementById('submitBtn');
+      status.textContent = 'Signing in…';
+      btn.disabled = true;
+
+      try {
+        const user = await window.login(email, password);
+        status.textContent = 'Success. Redirecting…';
+        // After a beat, go to dashboard
+        setTimeout(() => { window.location.href = '/dashboard.html'; }, 500);
+      } catch (err) {
+        console.error(err);
+        let msg = 'Login failed.';
+        if (err && err.json && err.json.error_description) msg = err.json.error_description;
+        status.textContent = msg;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
