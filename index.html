@@ -183,6 +183,31 @@
   });
 </script>
 
+<!-- Netlify Identity widget (must load BEFORE your app scripts) -->
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script>
+  // 1) Point at your Netlify Identity instance
+  netlifyIdentity.init({
+    APIUrl: "https://cerebrinet.netlify.app/.netlify/identity"
+  });
+
+  // 2) If someone lands here with a token (no forward, or bookmarked link),
+  // open the widget so it processes invite/confirm immediately.
+  (function handleIdentityTokens() {
+    const p = new URLSearchParams(location.hash.slice(1));
+    if (p.has("invite_token") || p.has("confirmation_token")) {
+      try { netlifyIdentity.open(); } catch (_) {}
+    }
+  })();
+
+  // 3) Optional: clean the URL after successful login/accept
+  netlifyIdentity.on("login", () => {
+    if (history.replaceState) {
+      history.replaceState(null, "", location.href.replace(/#.*$/, ""));
+    }
+  });
+</script>
+
 <!-- Main page logic -->
 <script>
 (function(){
