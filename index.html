@@ -160,6 +160,29 @@
   <div class="gateInner">INITIATE INITIAL DIAGNOSTICS</div>
 </div>
 
+<!-- Netlify Identity widget -->
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script>
+  // Initialize to point at your Netlify Identity instance
+  netlifyIdentity.init({
+    APIUrl: "https://your-auth-host.netlify.app/.netlify/identity"
+  });
+
+  // Handle invite or confirmation tokens in the URL hash
+  (function handleIdentityTokens() {
+    const params = new URLSearchParams(location.hash.slice(1));
+    if (params.has("invite_token") || params.has("confirmation_token")) {
+      try { netlifyIdentity.open(); } catch (_) {}
+    }
+  })();
+
+  // Optional: react to login events
+  netlifyIdentity.on("login", (user) => {
+    console.log("Logged in:", user);
+    // e.g., redirect user: window.location.replace("/dashboard");
+  });
+</script>
+
 <!-- Main page logic -->
 <script>
 (function(){
