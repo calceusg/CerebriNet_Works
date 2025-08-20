@@ -275,6 +275,62 @@
 })();
 </script>
 
+<!-- Identity widget to auto-handle #invite_token (RUNS BEFORE MAIN BOOT JS) -->
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script>
+(function () {
+  function initWidget() {
+    try {
+      if (!window.netlifyIdentity) return;
+
+      // ✅ Point the widget at your Netlify Identity site
+      window.netlifyIdentity.init({
+        APIUrl: "https://cerebrinet.netlify.app/.netlify/identity"
+      });
+
+      // Open modal if invite/confirm token is present
+      const hash = location.hash.slice(1);
+      const p = new URLSearchParams(hash);
+      if (p.has("invite_token") || p.has("confirmation_token")) {
+        try { window.netlifyIdentity.open(); } catch {}
+      }
+    } catch (e) {
+      console.warn("[identity.init] failed", e);
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initWidget, { once: true });
+  } else {
+    initWidget();
+  }
+})();
+</script>
+
+<script>
+/* Minimal gate: enable hum, hide overlay, kick off boot */
+(function setupNaoxinGate(){
+  const gate = document.getElementById('nxGate');
+  const btn  = document.getElementById('nxGateBtn');
+  if (!gate || !btn) return;
+
+  btn.addEventListener('click', () => {
+    // allow background hum (click is a user gesture)
+    window._allowHum = true;
+    window.humBlocked = false;
+    try { if (typeof ensureHum === 'function') ensureHum(); } catch {}
+
+    // hide/remove the gate
+    gate.classList.add('hidden');
+    setTimeout(() => {
+      try { gate.remove(); } catch {}
+      // start the boot lines + progressbar
+      window.dispatchEvent(new Event('startBoot'));
+    }, 240);
+  }, { once: true });
+})();
+</script>
+
 <!-- ===== Main Boot / UI Logic ===== -->
 <script>
 (function(){
@@ -741,7 +797,7 @@ if (autostart) {
 (function(){
   function makeAuth(){
     try {
-      const base = `${location.origin}/.netlify/identity`;
+      const base = "https://cerebrinet.netlify.app/.netlify/identity";
       const client = new window.gotrue.Gotrue({ APIUrl: base, setCookie: true });
       return {
         _client: client,
@@ -760,66 +816,6 @@ if (autostart) {
 
 <!-- (Optional) External auth helpers; safe if missing -->
 <script src="/assets/js/auth.js" defer></script>
-
-<!-- Identity widget to auto-handle #invite_token -->
-<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-<script>
-// Widget init + invite-token flow improvements
-(function(){
-  const hasToken = (()=>{
-    const q = new URLSearchParams(location.search);
-    const h = new URLSearchParams((location.hash||'').replace(/^#/,''));
-    return q.has('invite_token') || h.has('invite_token');
-  })();
-
-  function initWidget(){
-    try { if (window.netlifyIdentity) window.netlifyIdentity.init(); } catch(e){ console.warn('[identity.init] failed', e); }
-  }
-
-  // Start boot automatically when user clicks gate
-  (function setupNaoxinGate(){
-    const gate = document.getElementById('nxGate');
-    const btn  = document.getElementById('nxGateBtn');
-    if (!gate || !btn) return;
-
-    async function unlockAudio(el, volume=1){
-      if (!el) return; try { el.load?.(); el.muted = false; el.volume = volume; const p = el.play?.(); if (p && p.then) await p.catch(()=>{}); el.pause?.(); el.currentTime = 0; } catch {}
-    }
-    async function primeBootAudio(){
-      const humA = document.getElementById('bootHum') || document.getElementById('bootHumA');
-      const humB = document.getElementById('bootHumB');
-      await Promise.all([ unlockAudio(humA, 0.35), unlockAudio(humB, 0.25) ]);
-     // allow background hum only when explicitly enabled by the gate button
-window._allowHum = false;
-    }
-
-    btn.addEventListener('click', async () => {
-  try{ sessionStorage.setItem('fromPreboot','1'); }catch{}
-  await primeBootAudio();
-
-  // allow hum ONLY now (via the gate), and kick it once
-  window._allowHum = true;
-  window.humBlocked = false;
-  try { ensureHum(); } catch {}
-
-  gate.classList.add('hidden');
-  setTimeout(() => {
-    try { gate.remove(); } catch {}
-    setTimeout(() => { window.dispatchEvent(new Event('startBoot')); }, 200);
-  }, 240);
-}, { once: true });
-
-    // If an invite_token is present, auto-hide gate so widget/modal is clickable
-    if (hasToken) {
-      gate.classList.add('hidden');
-      setTimeout(()=>{ try{ gate.remove(); }catch{}; setTimeout(()=> window.dispatchEvent(new Event('startBoot')), 50); }, 150);
-    }
-  })();
-
-  // Ensure widget mounts
-  document.addEventListener('DOMContentLoaded', initWidget);
-})();
-</script>
 
 <!-- Fallback: Manual acceptInvite if widget doesn't open -->
 <script>
@@ -892,6 +888,6 @@ window._allowHum = false;
   });
 })();
 </script>
-
+  
 </body>
 </html>
